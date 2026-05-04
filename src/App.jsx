@@ -235,6 +235,7 @@ const App = () => {
                     value={panel.text}
                     onChange={(e) => handleChange(panel.id, e.target.value)}
                     placeholder="Start typing..."
+                    autoComplete="off"
                   />
                   <p className={wcClass}>{countWords(panel.text)} words</p>
                 </div>
@@ -278,6 +279,7 @@ const App = () => {
                   handleChange(panels[activeIdx].id, e.target.value)
                 }
                 placeholder="Start typing..."
+                autoComplete="off"
               />
               <div className="flex items-center justify-between mt-1">
                 <p className={wcClass}>
