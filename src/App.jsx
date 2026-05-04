@@ -7,7 +7,10 @@ const uid = () => ++_id;
 
 const countWords = (text) => {
   if (!text.trim()) return 0;
-  return text.trim().split(/\s+/).filter((w) => w.length > 0).length;
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0).length;
 };
 
 const MIN_WIDTH = 15;
@@ -37,7 +40,9 @@ const loadState = () => {
 
 const App = () => {
   const [panels, setPanels] = useState(loadState);
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") ?? "dark");
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("theme") ?? "dark",
+  );
   const [activeIdx, setActiveIdx] = useState(0);
   const [confirmId, setConfirmId] = useState(null);
   const containerRef = useRef(null);
@@ -56,14 +61,24 @@ const App = () => {
       const delta = ((e.clientX - startX) / rect.width) * 100;
       let a = startWidths[idx] + delta;
       let b = startWidths[idx + 1] - delta;
-      if (a < MIN_WIDTH) { b -= MIN_WIDTH - a; a = MIN_WIDTH; }
-      if (b < MIN_WIDTH) { a -= MIN_WIDTH - b; b = MIN_WIDTH; }
+      if (a < MIN_WIDTH) {
+        b -= MIN_WIDTH - a;
+        a = MIN_WIDTH;
+      }
+      if (b < MIN_WIDTH) {
+        a -= MIN_WIDTH - b;
+        b = MIN_WIDTH;
+      }
       a = Math.max(MIN_WIDTH, a);
       b = Math.max(MIN_WIDTH, b);
       setPanels((prev) =>
         prev.map((p, i) =>
-          i === idx ? { ...p, width: a } : i === idx + 1 ? { ...p, width: b } : p
-        )
+          i === idx
+            ? { ...p, width: a }
+            : i === idx + 1
+              ? { ...p, width: b }
+              : p,
+        ),
       );
     };
     const onUp = () => {
@@ -133,9 +148,13 @@ const App = () => {
   }`;
   const labelClass = `text-xs font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`;
   const closeClass = `text-xs leading-none transition-colors cursor-pointer ${
-    isDark ? "text-gray-600 hover:text-red-400" : "text-gray-400 hover:text-red-500"
+    isDark
+      ? "text-gray-600 hover:text-red-400"
+      : "text-gray-400 hover:text-red-500"
   }`;
-  const wcClass = isDark ? "text-xs mt-1 text-gray-400" : "text-xs mt-1 text-gray-500";
+  const wcClass = isDark
+    ? "text-xs mt-1 text-gray-400"
+    : "text-xs mt-1 text-gray-500";
 
   return (
     <div
@@ -160,10 +179,14 @@ const App = () => {
           <button
             key={p.id}
             onClick={() => setActiveIdx(i)}
-            className={`flex-shrink-0 px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
+            className={`shrink-0 px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
               activeIdx === i
-                ? isDark ? "bg-gray-800" : "bg-white"
-                : isDark ? "bg-gray-900 text-gray-400" : "bg-gray-100 text-gray-500"
+                ? isDark
+                  ? "bg-gray-800"
+                  : "bg-white"
+                : isDark
+                  ? "bg-gray-900 text-gray-400"
+                  : "bg-gray-100 text-gray-500"
             }`}
           >
             Note {i + 1}
@@ -172,8 +195,10 @@ const App = () => {
         {panels.length < MAX_PANELS && (
           <button
             onClick={addPanel}
-            className={`flex-shrink-0 px-3 py-2 text-sm cursor-pointer ${
-              isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"
+            className={`shrink-0 px-3 py-2 text-sm cursor-pointer ${
+              isDark
+                ? "text-gray-400 hover:text-white"
+                : "text-gray-500 hover:text-gray-900"
             }`}
             title="Add panel"
           >
@@ -187,7 +212,10 @@ const App = () => {
         <div className="hidden md:flex h-full" ref={containerRef}>
           {panels.map((panel, i) => (
             <Fragment key={panel.id}>
-              <div style={{ width: `${panel.width}%` }} className="flex flex-col min-w-0">
+              <div
+                style={{ width: `${panel.width}%` }}
+                className="flex flex-col min-w-0"
+              >
                 <div className="flex items-center justify-between px-3 pt-2 pb-0">
                   <span className={labelClass}>Note {i + 1}</span>
                   {panels.length > 1 && (
@@ -228,8 +256,8 @@ const App = () => {
                     const total = panels[i].width + panels[i + 1].width;
                     commit(
                       panels.map((p, j) =>
-                        j === i || j === i + 1 ? { ...p, width: total / 2 } : p
-                      )
+                        j === i || j === i + 1 ? { ...p, width: total / 2 } : p,
+                      ),
                     );
                   }}
                 />
@@ -246,16 +274,22 @@ const App = () => {
                 isDark={isDark}
                 className="flex-1 min-h-0 resize-none"
                 value={panels[activeIdx].text}
-                onChange={(e) => handleChange(panels[activeIdx].id, e.target.value)}
+                onChange={(e) =>
+                  handleChange(panels[activeIdx].id, e.target.value)
+                }
                 placeholder="Start typing..."
               />
               <div className="flex items-center justify-between mt-1">
-                <p className={wcClass}>{countWords(panels[activeIdx].text)} words</p>
+                <p className={wcClass}>
+                  {countWords(panels[activeIdx].text)} words
+                </p>
                 {panels.length > 1 && (
                   <button
                     onClick={() => removePanel(panels[activeIdx].id)}
                     className={`text-xs transition-colors cursor-pointer ${
-                      isDark ? "text-gray-600 hover:text-red-400" : "text-gray-400 hover:text-red-500"
+                      isDark
+                        ? "text-gray-600 hover:text-red-400"
+                        : "text-gray-400 hover:text-red-500"
                     }`}
                   >
                     Remove
@@ -280,7 +314,9 @@ const App = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-sm font-medium mb-1">Delete this note?</p>
-            <p className={`text-xs mb-4 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+            <p
+              className={`text-xs mb-4 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+            >
               This note has content that will be permanently lost.
             </p>
             <div className="flex gap-2 justify-end">
