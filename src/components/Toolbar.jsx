@@ -1,3 +1,20 @@
+const PlusIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="17"
+    height="17"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
 const SunIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -38,10 +55,14 @@ const MoonIcon = () => (
   </svg>
 );
 
-const Toolbar = ({ isDark, onToggleTheme }) => {
+const Toolbar = ({ isDark, onToggleTheme, onAddPanel, canAddPanel }) => {
   const btn = isDark
     ? "p-2 rounded bg-gray-700 hover:bg-gray-600 text-white transition-colors cursor-pointer"
     : "p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer";
+
+  const disabledBtn = isDark
+    ? "p-2 rounded bg-gray-800 text-gray-600 cursor-not-allowed"
+    : "p-2 rounded bg-gray-100 text-gray-300 cursor-not-allowed";
 
   return (
     <header
@@ -51,6 +72,14 @@ const Toolbar = ({ isDark, onToggleTheme }) => {
     >
       <h1 className="text-lg font-semibold tracking-tight">SplitNote</h1>
       <div className="flex items-center gap-2">
+        <button
+          onClick={onAddPanel}
+          disabled={!canAddPanel}
+          className={canAddPanel ? btn : disabledBtn}
+          title={canAddPanel ? "Add panel" : "Maximum panels reached"}
+        >
+          <PlusIcon />
+        </button>
         <button
           onClick={onToggleTheme}
           className={btn}
