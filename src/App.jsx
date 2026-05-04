@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import jsPDF from "jspdf";
-import LZString from "lz-string";
 import TextArea from "./components/TextArea";
 import Toolbar from "./components/Toolbar";
 
@@ -9,24 +7,7 @@ const countWords = (text) => {
   return text.trim().split(/\s+/).filter((w) => w.length > 0).length;
 };
 
-const URL_LENGTH_LIMIT = 2000;
-
-const encodeNotes = (left, right) =>
-  LZString.compressToEncodedURIComponent(JSON.stringify({ left, right }));
-
-const getInitialText = (side) => {
-  const params = new URLSearchParams(window.location.search);
-  const shared = params.get("notes");
-  if (shared) {
-    try {
-      const decoded = JSON.parse(LZString.decompressFromEncodedURIComponent(shared));
-      if (decoded?.[side] !== undefined) return decoded[side];
-    } catch {
-      // fall through to localStorage
-    }
-  }
-  return localStorage.getItem(`${side}Text`) ?? "";
-};
+const getInitialText = (side) => localStorage.getItem(`${side}Text`) ?? "";
 
 const App = () => {
   const [leftText, setLeftText] = useState(() => getInitialText("left"));
@@ -34,7 +15,6 @@ const App = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") ?? "dark");
   const [splitPercent, setSplitPercent] = useState(50);
   const [activePanel, setActivePanel] = useState("left");
-  const [shareToast, setShareToast] = useState(null);
 
   const containerRef = useRef(null);
   const isDragging = useRef(false);
@@ -76,52 +56,6 @@ const App = () => {
     localStorage.setItem("theme", next);
   };
 
-  const handleShare = async () => {
-    const encoded = encodeNotes(leftText, rightText);
-    const url = `${window.location.origin}${window.location.pathname}?notes=${encoded}`;
-    const tooLong = url.length > URL_LENGTH_LIMIT;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      prompt("Copy this link:", url);
-      return;
-    }
-    const toast = tooLong
-      ? { type: "warning", message: "Link copied — it's long and may break in some apps" }
-      : { type: "success", message: "Link copied!" };
-    setShareToast(toast);
-    setTimeout(() => setShareToast(null), tooLong ? 5000 : 2500);
-  };
-
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    const margin = 15;
-    const width = doc.internal.pageSize.getWidth() - margin * 2;
-
-    const addSection = (title, text) => {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(title, margin, 20);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      const lines = doc.splitTextToSize(text || "(empty)", width);
-      let y = 32;
-      for (const line of lines) {
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(line, margin, y);
-        y += 6;
-      }
-    };
-
-    addSection("Left Note", leftText);
-    doc.addPage();
-    addSection("Right Note", rightText);
-    doc.save("splitnote.pdf");
-  };
-
   const isDark = theme === "dark";
   const wc = isDark ? "text-xs mt-1 text-gray-400" : "text-xs mt-1 text-gray-500";
 
@@ -134,9 +68,6 @@ const App = () => {
       <Toolbar
         isDark={isDark}
         onToggleTheme={toggleTheme}
-        onShare={handleShare}
-        onDownloadPDF={handleDownloadPDF}
-        shareToast={shareToast}
       />
 
       {/* Mobile: tab switcher */}

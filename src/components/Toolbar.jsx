@@ -1,39 +1,3 @@
-const ShareIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="17"
-    height="17"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-    <polyline points="16 6 12 2 8 6" />
-    <line x1="12" y1="2" x2="12" y2="15" />
-  </svg>
-);
-
-const DownloadIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="17"
-    height="17"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
 const SunIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -74,13 +38,7 @@ const MoonIcon = () => (
   </svg>
 );
 
-const Toolbar = ({
-  isDark,
-  onToggleTheme,
-  onShare,
-  onDownloadPDF,
-  shareToast,
-}) => {
+const Toolbar = ({ isDark, onToggleTheme }) => {
   const btn = isDark
     ? "p-2 rounded bg-gray-700 hover:bg-gray-600 text-white transition-colors cursor-pointer"
     : "p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer";
@@ -93,27 +51,6 @@ const Toolbar = ({
     >
       <h1 className="text-lg font-semibold tracking-tight">SplitNote</h1>
       <div className="flex items-center gap-2">
-        {shareToast && (
-          <span
-            className={`text-xs px-2 py-1 rounded ${
-              shareToast.type === "warning"
-                ? isDark
-                  ? "bg-amber-900 text-amber-300"
-                  : "bg-amber-100 text-amber-700"
-                : isDark
-                ? "bg-green-900 text-green-300"
-                : "bg-green-100 text-green-700"
-            }`}
-          >
-            {shareToast.message}
-          </span>
-        )}
-        <button onClick={onShare} className={btn} title="Share notes">
-          <ShareIcon />
-        </button>
-        <button onClick={onDownloadPDF} className={btn} title="Download as PDF">
-          <DownloadIcon />
-        </button>
         <button
           onClick={onToggleTheme}
           className={btn}
