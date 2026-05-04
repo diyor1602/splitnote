@@ -1,53 +1,226 @@
+import { useState, useRef, useEffect } from "react";
+import jsPDF from "jspdf";
 import TextArea from "./components/TextArea";
-
-import { useState } from "react";
+import Toolbar from "./components/Toolbar";
 
 const countWords = (text) => {
   if (!text.trim()) return 0;
-  return text
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
+  return text.trim().split(/\s+/).filter((w) => w.length > 0).length;
+};
+
+const encodeNotes = (left, right) => {
+  try {
+    return btoa(encodeURIComponent(JSON.stringify({ left, right })));
+  } catch {
+    return "";
+  }
+};
+
+const getInitialText = (side) => {
+  const params = new URLSearchParams(window.location.search);
+  const shared = params.get("notes");
+  if (shared) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(atob(shared)));
+      if (decoded?.[side] !== undefined) return decoded[side];
+    } catch {
+      // fall through to localStorage
+    }
+  }
+  return localStorage.getItem(`${side}Text`) ?? "";
 };
 
 const App = () => {
-  const [leftText, setLeftText] = useState(
-    localStorage.getItem("leftText") || "",
-  );
-  const [rightText, setRightText] = useState(
-    localStorage.getItem("rightText") || "",
-  );
+  const [leftText, setLeftText] = useState(() => getInitialText("left"));
+  const [rightText, setRightText] = useState(() => getInitialText("right"));
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") ?? "dark");
+  const [splitPercent, setSplitPercent] = useState(50);
+  const [activePanel, setActivePanel] = useState("left");
+  const [shareToast, setShareToast] = useState(false);
+
+  const containerRef = useRef(null);
+  const isDragging = useRef(false);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setSplitPercent(Math.min(Math.max(pct, 20), 80));
+    };
+    const onUp = () => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const handleLeftChange = (e) => {
+    setLeftText(e.target.value);
+    localStorage.setItem("leftText", e.target.value);
+  };
+
+  const handleRightChange = (e) => {
+    setRightText(e.target.value);
+    localStorage.setItem("rightText", e.target.value);
+  };
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+  };
+
+  const handleShare = async () => {
+    const encoded = encodeNotes(leftText, rightText);
+    const url = `${window.location.origin}${window.location.pathname}?notes=${encoded}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 2500);
+    } catch {
+      prompt("Copy this link:", url);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const margin = 15;
+    const width = doc.internal.pageSize.getWidth() - margin * 2;
+
+    const addSection = (title, text) => {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(title, margin, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const lines = doc.splitTextToSize(text || "(empty)", width);
+      let y = 32;
+      for (const line of lines) {
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(line, margin, y);
+        y += 6;
+      }
+    };
+
+    addSection("Left Note", leftText);
+    doc.addPage();
+    addSection("Right Note", rightText);
+    doc.save("splitnote.pdf");
+  };
+
+  const isDark = theme === "dark";
+  const wc = isDark ? "text-xs mt-1 text-gray-400" : "text-xs mt-1 text-gray-500";
 
   return (
-    <div className="bg-gray-900 h-screen w-screen text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-4 mt-4">
-          <div className="w-full">
+    <div
+      className={`h-screen w-screen flex flex-col ${
+        isDark ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+      }`}
+    >
+      <Toolbar
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        onShare={handleShare}
+        onDownloadPDF={handleDownloadPDF}
+        shareToast={shareToast}
+      />
+
+      {/* Mobile: tab switcher */}
+      <div
+        className={`flex md:hidden shrink-0 border-b ${
+          isDark ? "border-gray-700" : "border-gray-200"
+        }`}
+      >
+        {["left", "right"].map((p) => (
+          <button
+            key={p}
+            onClick={() => setActivePanel(p)}
+            className={`flex-1 py-2 text-sm font-medium capitalize transition-colors cursor-pointer ${
+              activePanel === p
+                ? isDark
+                  ? "bg-gray-800"
+                  : "bg-white"
+                : isDark
+                ? "bg-gray-900"
+                : "bg-gray-100"
+            }`}
+          >
+            {p} · {countWords(p === "left" ? leftText : rightText)} words
+          </button>
+        ))}
+      </div>
+
+      {/* Content area */}
+      <div className="flex-1 overflow-hidden">
+        {/* Desktop: resizable split view */}
+        <div className="hidden md:flex h-full" ref={containerRef}>
+          <div
+            style={{ width: `${splitPercent}%` }}
+            className="flex flex-col p-3 min-w-0"
+          >
             <TextArea
-              className="min-h-[calc(100vh-140px)] max-h-[calc(100vh-140px)]"
+              isDark={isDark}
+              className="flex-1 min-h-0 resize-none"
               value={leftText}
-              onChange={(e) => {
-                setLeftText(e.target.value);
-                localStorage.setItem("leftText", e.target.value);
-              }}
+              onChange={handleLeftChange}
+              placeholder="Start typing..."
             />
-            <div className="mt-2 text-sm text-gray-400">
-              {countWords(leftText)} words
-            </div>
+            <p className={wc}>{countWords(leftText)} words</p>
           </div>
-          <div className="w-full">
+
+          <div
+            className={`w-1.5 shrink-0 cursor-col-resize transition-colors ${
+              isDark
+                ? "bg-gray-700 hover:bg-blue-500"
+                : "bg-gray-200 hover:bg-blue-400"
+            }`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              isDragging.current = true;
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+            }}
+            onDoubleClick={() => setSplitPercent(50)}
+          />
+
+          <div
+            style={{ width: `${100 - splitPercent}%` }}
+            className="flex flex-col p-3 min-w-0"
+          >
             <TextArea
-              className="min-h-[calc(100vh-140px)] max-h-[calc(100vh-140px)]"
+              isDark={isDark}
+              className="flex-1 min-h-0 resize-none"
               value={rightText}
-              onChange={(e) => {
-                setRightText(e.target.value);
-                localStorage.setItem("rightText", e.target.value);
-              }}
+              onChange={handleRightChange}
+              placeholder="Start typing..."
             />
-            <div className="mt-2 text-sm text-gray-400">
-              {countWords(rightText)} words
-            </div>
+            <p className={wc}>{countWords(rightText)} words</p>
           </div>
+        </div>
+
+        {/* Mobile: single panel */}
+        <div className="flex md:hidden flex-col p-3 h-full">
+          <TextArea
+            isDark={isDark}
+            className="flex-1 min-h-0 resize-none"
+            value={activePanel === "left" ? leftText : rightText}
+            onChange={activePanel === "left" ? handleLeftChange : handleRightChange}
+            placeholder="Start typing..."
+          />
+          <p className={wc}>
+            {countWords(activePanel === "left" ? leftText : rightText)} words
+          </p>
         </div>
       </div>
     </div>
