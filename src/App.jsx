@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import jsPDF from "jspdf";
+import LZString from "lz-string";
 import TextArea from "./components/TextArea";
 import Toolbar from "./components/Toolbar";
 
@@ -8,20 +9,17 @@ const countWords = (text) => {
   return text.trim().split(/\s+/).filter((w) => w.length > 0).length;
 };
 
-const encodeNotes = (left, right) => {
-  try {
-    return btoa(encodeURIComponent(JSON.stringify({ left, right })));
-  } catch {
-    return "";
-  }
-};
+const URL_LENGTH_LIMIT = 2000;
+
+const encodeNotes = (left, right) =>
+  LZString.compressToEncodedURIComponent(JSON.stringify({ left, right }));
 
 const getInitialText = (side) => {
   const params = new URLSearchParams(window.location.search);
   const shared = params.get("notes");
   if (shared) {
     try {
-      const decoded = JSON.parse(decodeURIComponent(atob(shared)));
+      const decoded = JSON.parse(LZString.decompressFromEncodedURIComponent(shared));
       if (decoded?.[side] !== undefined) return decoded[side];
     } catch {
       // fall through to localStorage
@@ -36,7 +34,7 @@ const App = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") ?? "dark");
   const [splitPercent, setSplitPercent] = useState(50);
   const [activePanel, setActivePanel] = useState("left");
-  const [shareToast, setShareToast] = useState(false);
+  const [shareToast, setShareToast] = useState(null);
 
   const containerRef = useRef(null);
   const isDragging = useRef(false);
@@ -81,13 +79,18 @@ const App = () => {
   const handleShare = async () => {
     const encoded = encodeNotes(leftText, rightText);
     const url = `${window.location.origin}${window.location.pathname}?notes=${encoded}`;
+    const tooLong = url.length > URL_LENGTH_LIMIT;
     try {
       await navigator.clipboard.writeText(url);
-      setShareToast(true);
-      setTimeout(() => setShareToast(false), 2500);
     } catch {
       prompt("Copy this link:", url);
+      return;
     }
+    const toast = tooLong
+      ? { type: "warning", message: "Link copied — it's long and may break in some apps" }
+      : { type: "success", message: "Link copied!" };
+    setShareToast(toast);
+    setTimeout(() => setShareToast(null), tooLong ? 5000 : 2500);
   };
 
   const handleDownloadPDF = () => {

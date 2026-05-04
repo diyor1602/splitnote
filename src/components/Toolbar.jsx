@@ -96,12 +96,16 @@ const Toolbar = ({
         {shareToast && (
           <span
             className={`text-xs px-2 py-1 rounded ${
-              isDark
+              shareToast.type === "warning"
+                ? isDark
+                  ? "bg-amber-900 text-amber-300"
+                  : "bg-amber-100 text-amber-700"
+                : isDark
                 ? "bg-green-900 text-green-300"
                 : "bg-green-100 text-green-700"
             }`}
           >
-            Link copied!
+            {shareToast.message}
           </span>
         )}
         <button onClick={onShare} className={btn} title="Share notes">
